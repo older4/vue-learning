@@ -12,6 +12,9 @@
         <nav>
             <router-link to="/top">トップページ</router-link>
             <router-link to="/users">ユーザ一覧ページ</router-link>
+            <router-link to="/users/new?redirect=true">新規ユーザ作成</router-link>
+            <router-link to="/login" v-show="!Auth.loggedIn()">ログイン</router-link>
+            <router-link to="/logout" v-show="Auth.loggedIn()">ログアウト</router-link>
         </nav>
         <router-view></router-view>
     </div>
@@ -39,6 +42,45 @@
         </div>
     </script>
 
+    <script type="text/x-template" id="user-create">
+        <div>
+            <div class = "sending" v-if="sending">Sending...</div>
+            <div>
+                <h2>新規ユーザ作成</h2>
+                <div>
+                    <label>名前：</label>
+                    <input type="text" v-model="user.name">
+                </div>
+                <div>
+                    <label>説明文：</label>
+                    <textarea v-model="user.description"></textarea>
+                </div>
+                <div v-if="error" class="error">
+                    {{error}}
+                </div>
+                <div>
+                    <input type="button" @click="createUser" value="送信">
+                </div>
+            </div>
+        </div>
+    </script>
+
+    <script type="text/x-template" id="login">
+        <div>
+            <h2>Login</h2>
+            <p v-if="$route.query.redirect">
+                ログインしてください．
+            </p>
+            <form @submit.prevent="login">
+                <label><input v-model="email" placeholder="email"></label>
+                <label><input v-model="pass" placeholder="password" type="password"></label>
+                <br>
+                <button type="submit">ログイン</button>
+                <p v-if="error" class="error">ログインに失敗しました．</p>
+            </form>
+        </div>
+    </script>
+
     <script>
         let userData = [
             {
@@ -59,10 +101,85 @@
             }, 1000)
         }
 
-        const getUser
+        const getUser = function (userid, callback) {
+            setTimeout(function () {
+                const filterdUsers = userData.filter(user => user.id === parseInt(userid, 10))
+                callback(null, filterdUsers && filterdUsers[0])
+            })
+        }
+
+        const postUser = function (params, callback) {
+            setTimeout(function () {
+                params.id = userData.length + 1
+                userData.push(params)
+                callback(null, params)
+            }, 1000)
+        }
+
+        const Auth = {
+            login: function (email, pass, cb) {
+                setTimeout(function () {
+                    if (email === "vue@examle.com" && pass === "vue") {
+                        localStorage.token = Math.random().toString(36).substring(7)
+                        if (cb) {
+                            cb(ture)
+                        } else {
+                            cb(false)
+                        }
+                    }
+                }, 0)
+            },
+            logout: function () {
+                delete localStorage.token
+            },
+
+            loggedIn: function () {
+                return !!localStorage.token
+            }
+        }
+
+        const UserCreate = {
+            template: "#user-create",
+            data: function () {
+                return {
+                    sending: false,
+                    user: this.defalutUser(),
+                    error: null
+                }
+            },
+            created: function () {
+            },
+            methods: {
+                defalutUser: function () {
+                    return {
+                        name: "",
+                        description: ""
+                    }
+                },
+                createUser: function () {
+                    if (this.user.name.trim() === "") {
+                        this.error = "nameは必須"
+                        return
+                    }
+                    if (this.user.description.trim() === "") {
+                        this.error = "descriptionは必須"
+                        return
+                    }
+                    postUser(this.user, function (err, user) {
+                        this.sending = false
+                        if (err) {
+                            this.error = err.toString
+                        } else {
+                            this.error = null
+                            this.user = this.defalutUser()
+                        }
+                    })
+                },
+            }
+        }
 
         // templateの拡張
-        let UserList = {
+        const UserList = {
             template: '#user-list',
             data: function () {
                 return {
@@ -129,6 +246,28 @@
             }
         }
 
+        const Login = {
+            template: "#login",
+            data: function () {
+                return {
+                    email: "vue@example.com",
+                    pass: "",
+                    error: false
+                }
+            },
+            methods: {
+                login: function () {
+                    Auth.login(this.email, this.pass, (function (loggedIn) {
+                        if (!loggedIn) {
+                            this.error = true
+                        } else {
+                            this.$route.replace(this.$route.replace.redirect || "/")
+                        }
+                    }).bind(this))
+                }
+            }
+        }
+
         let router = new VueRouter({
             routes: [
                 {
@@ -142,8 +281,33 @@
                     component: UserList
                 },
                 {
-                    path: "/user/:UserID",
+                    path: "/users/new",
+                    component: UserCreate,
+                    beforeEnter: function (to, from, next) {
+                        if (!Auth.loggedIn()) {
+                            next({
+                                path: "/login",
+                                query: { redirect: to.fullPath }
+                            })
+                        } else {
+                            next()
+                        }
+                    },
+                },
+                {
+                    path: "/users/:UserID",
                     component: UserDetail
+                },
+                {
+                    path: "/login",
+                    component: Login
+                },
+                {
+                    path: "/logout",
+                    beforeEnter: function (to, from, next) {
+                        Auth.logout()
+                        next("/")
+                    }
                 }
             ]
         })

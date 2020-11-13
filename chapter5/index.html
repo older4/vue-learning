@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vue anime test</title>
+</head>
+
+<body>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12"></script>
+    <script src="https://unpkg.com/vue-router/dist/vue-router.js"></script>
+    <link rel="stylesheet" href="/chapter5/style.css">
+
+    <div id="app">
+        <button @click="isShown = !isShown">表示の切り替え</button>
+        <transition>
+            <p v-show="isShown">Hello</p>
+        </transition>
+    </div>
+    <script src="/chapter5/app.js"></script>
+</body>
+
+</html>
